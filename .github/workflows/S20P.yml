@@ -28,13 +28,13 @@ permissions: write-all
 #CI任务
 jobs:
   config:
-    name: S20P-NO-WIFI
+    name: S20P-WIFI-YES
 
     #调用公用编译核心WRT-CORE.yml
     uses: ./.github/workflows/WRT-CORE.yml
     with:
       #编译配置
-      WRT_CONFIG: S20P-NO-WIFI
+      WRT_CONFIG: S20P-WIFI-YES
       #完整配置文件，不再叠加GENERAL.txt
       WRT_FULL_CONFIG: true
       #默认主题
