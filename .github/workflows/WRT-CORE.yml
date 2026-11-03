@@ -44,6 +44,10 @@ on:
         required: false
         default: false
         type: boolean
+      WRT_FULL_CONFIG:
+        required: false
+        default: false
+        type: boolean
 
 env:
   GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
@@ -59,6 +63,7 @@ env:
   WRT_SOURCE: ${{inputs.WRT_SOURCE}}
   WRT_PACKAGE: ${{inputs.WRT_PACKAGE}}
   WRT_TEST: ${{inputs.WRT_TEST}}
+  WRT_FULL_CONFIG: ${{inputs.WRT_FULL_CONFIG}}
 
 jobs:
   core:
@@ -106,7 +111,11 @@ jobs:
           WRT_CACHE_BRANCH=${WRT_BRANCH//\//-}
           WRT_CACHE_TARGET="$WRT_TARGET-$WRT_SUBTARGET"
           WRT_CACHE_PREFIX="wrt-$WRT_CACHE_SOURCE-$WRT_CACHE_BRANCH-$WRT_CACHE_TARGET"
-          WRT_WIFI=$(grep -oE 'WIFI-(YES|NO)$' <<< "${WRT_CONFIG^^}" || true); WRT_WIFI=${WRT_WIFI:-none}
+          case "${WRT_CONFIG^^}" in
+            *WIFI-YES|*YES-WIFI) WRT_WIFI=WIFI-YES ;;
+            *WIFI-NO|*NO-WIFI) WRT_WIFI=WIFI-NO ;;
+            *) WRT_WIFI=none ;;
+          esac
 
           {
             echo "WRT_INFO=${WRT_SOURCE%%/*}"
@@ -184,7 +193,9 @@ jobs:
         run: |
           cd ./wrt/
 
-          if [[ "${WRT_CONFIG,,}" == *"test"* ]]; then
+          if [[ "$WRT_FULL_CONFIG" == 'true' ]]; then
+            cat $GITHUB_WORKSPACE/Config/$WRT_CONFIG.txt >> .config
+          elif [[ "${WRT_CONFIG,,}" == *"test"* ]]; then
             cat $GITHUB_WORKSPACE/Config/$WRT_CONFIG.txt >> .config
           else
             cat $GITHUB_WORKSPACE/Config/$WRT_CONFIG.txt $GITHUB_WORKSPACE/Config/GENERAL.txt >> .config

@@ -25,6 +25,7 @@ on:
           - MEDIATEK-WIFI-NO
           - MEDIATEK-WIFI-YES
           - ROCKCHIP
+          - S20P-NO-WIFI
           - X86
           - TEST
       SOURCE:
@@ -59,6 +60,8 @@ jobs:
     with:
       #编译配置
       WRT_CONFIG: ${{inputs.CONFIG}}
+      #完整配置文件，不再叠加GENERAL.txt
+      WRT_FULL_CONFIG: ${{inputs.CONFIG == 'S20P-NO-WIFI'}}
       #默认主题
       WRT_THEME: vantage
       #默认主机名
