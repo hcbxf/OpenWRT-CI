@@ -48,6 +48,10 @@ on:
         required: false
         default: false
         type: boolean
+      WRT_ARTIFACT:
+        required: false
+        default: false
+        type: boolean
 
 env:
   GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
@@ -64,6 +68,7 @@ env:
   WRT_PACKAGE: ${{inputs.WRT_PACKAGE}}
   WRT_TEST: ${{inputs.WRT_TEST}}
   WRT_FULL_CONFIG: ${{inputs.WRT_FULL_CONFIG}}
+  WRT_ARTIFACT: ${{inputs.WRT_ARTIFACT}}
 
 jobs:
   core:
@@ -293,6 +298,7 @@ jobs:
           fi
 
       - name: Release Firmware
+        if: ${{ !inputs.WRT_ARTIFACT }}
         uses: softprops/action-gh-release@master
         with:
           tag_name: ${{env.WRT_CONFIG}}-${{env.WRT_INFO}}-${{env.WRT_BRANCH}}-${{env.WRT_DATE}}
@@ -319,6 +325,14 @@ jobs:
 
             内核版本：${{env.WRT_KVER}}
             插件列表：${{env.WRT_LIST}}
+
+      - name: Upload Firmware Artifacts
+        if: ${{ inputs.WRT_ARTIFACT && !inputs.WRT_TEST }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{env.WRT_CONFIG}}-${{env.WRT_INFO}}-${{env.WRT_BRANCH}}-${{env.WRT_DATE}}-${{github.run_attempt}}
+          path: ./wrt/upload/*.*
+          retention-days: 7
 
   cache-rollover:
     name: Roll cache generations

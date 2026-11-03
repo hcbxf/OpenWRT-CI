@@ -84,3 +84,5 @@ jobs:
       WRT_PACKAGE: ${{inputs.PACKAGE}}
       #仅输出配置文件
       WRT_TEST: ${{inputs.TEST || false}}
+      #S20P不发布Release，改为上传Artifact
+      WRT_ARTIFACT: ${{inputs.CONFIG == 'S20P-NO-WIFI'}}
