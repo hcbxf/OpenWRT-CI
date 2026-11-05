@@ -52,6 +52,11 @@ on:
         required: false
         default: false
         type: boolean
+      WRT_WIFI_POWER:
+        description: '集成WiFi电源控制APP（仅指定工作流启用）'
+        required: false
+        default: false
+        type: boolean
 
 env:
   GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
@@ -69,6 +74,7 @@ env:
   WRT_TEST: ${{inputs.WRT_TEST}}
   WRT_FULL_CONFIG: ${{inputs.WRT_FULL_CONFIG}}
   WRT_ARTIFACT: ${{inputs.WRT_ARTIFACT}}
+  WRT_WIFI_POWER: ${{inputs.WRT_WIFI_POWER}}
 
 jobs:
   core:
@@ -194,6 +200,10 @@ jobs:
           $GITHUB_WORKSPACE/Scripts/Handles.sh
           $GITHUB_WORKSPACE/.github/scripts/prepare-i2c-tools.sh
 
+          if [[ "$WRT_WIFI_POWER" == 'true' ]]; then
+            cp -rf "$GITHUB_WORKSPACE/Package/luci-app-wifi-power" ./package/
+          fi
+
       - name: Custom Settings
         run: |
           cd ./wrt/
@@ -204,6 +214,10 @@ jobs:
             cat $GITHUB_WORKSPACE/Config/$WRT_CONFIG.txt >> .config
           else
             cat $GITHUB_WORKSPACE/Config/$WRT_CONFIG.txt $GITHUB_WORKSPACE/Config/GENERAL.txt >> .config
+          fi
+
+          if [[ "$WRT_WIFI_POWER" == 'true' ]]; then
+            echo "CONFIG_PACKAGE_luci-app-wifi-power=y" >> ./.config
           fi
 
           $GITHUB_WORKSPACE/Scripts/Settings.sh

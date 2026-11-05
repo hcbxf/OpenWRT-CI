@@ -1,0 +1,13 @@
+{
+	"admin/network/wifi-power": {
+		"title": "WiFi Power",
+		"order": 90,
+		"action": {
+			"type": "view",
+			"path": "wifi-power/overview"
+		},
+		"depends": {
+			"acl": [ "luci-app-wifi-power" ]
+		}
+	}
+}

@@ -1,0 +1,14 @@
+{
+	"luci-app-wifi-power": {
+		"description": "Grant access to WiFi power control",
+		"write": {
+			"file": {
+				"/usr/sbin/wifi-power": [ "exec" ],
+				"/usr/sbin/wifi-power *": [ "exec" ]
+			},
+			"ubus": {
+				"file": [ "exec" ]
+			}
+		}
+	}
+}

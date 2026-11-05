@@ -61,3 +61,5 @@ jobs:
       WRT_TEST: ${{inputs.TEST || false}}
       #不发布Release，改为上传Artifact
       WRT_ARTIFACT: true
+      #集成WiFi电源控制APP（仅S20P工作流）
+      WRT_WIFI_POWER: true

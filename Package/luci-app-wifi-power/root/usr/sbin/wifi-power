@@ -1,0 +1,106 @@
+#!/bin/sh
+# SPDX-License-Identifier: MIT
+
+MODULE="mt7915e"
+BLACKLIST="blacklist ${MODULE}"
+BLACKLIST_RE="^[[:space:]]*blacklist[[:space:]]\{1,\}${MODULE}[[:space:]]*$"
+MODULES_CONF="/etc/modules.conf"
+PLATFORM_DRIVER="/sys/bus/platform/drivers/mt798x-wmac"
+
+is_loaded() {
+	lsmod | awk '{print $1}' | grep -qx "${MODULE}"
+}
+
+is_active() {
+	local dev
+
+	for dev in /sys/bus/platform/devices/*.wifi; do
+		[ -e "$dev/driver" ] && return 0
+	done
+
+	return 1
+}
+
+set_blacklist() {
+	[ -f "$MODULES_CONF" ] || : > "$MODULES_CONF"
+
+	if ! grep -q "$BLACKLIST_RE" "$MODULES_CONF"; then
+		printf '%s\n' "$BLACKLIST" >> "$MODULES_CONF"
+	fi
+}
+
+clear_blacklist() {
+	[ -f "$MODULES_CONF" ] || return 0
+	sed -i "/$BLACKLIST_RE/d" "$MODULES_CONF"
+}
+
+unbind_all() {
+	local dev name
+
+	for dev in /sys/bus/platform/devices/*.wifi; do
+		[ -e "$dev/driver" ] || continue
+		name=$(basename "$dev")
+		echo "$name" > "${PLATFORM_DRIVER}/unbind" 2>/dev/null || true
+	done
+}
+
+bind_all() {
+	local dev name
+
+	for dev in /sys/bus/platform/devices/*.wifi; do
+		[ -e "$dev" ] || continue
+		[ -e "$dev/driver" ] && continue
+		name=$(basename "$dev")
+		echo "$name" > "${PLATFORM_DRIVER}/bind" 2>/dev/null || true
+	done
+}
+
+wifi_off() {
+	set_blacklist
+	wifi down >/dev/null 2>&1 || true
+	sleep 1
+
+	if is_loaded; then
+		rmmod "$MODULE" 2>/dev/null || unbind_all
+	else
+		unbind_all
+	fi
+
+	# Best effort: drop the common libraries if they are no longer in use.
+	rmmod mt76_connac_lib 2>/dev/null || true
+	rmmod mt76 2>/dev/null || true
+}
+
+wifi_on() {
+	clear_blacklist
+
+	if ! is_loaded && [ ! -d "/sys/module/${MODULE}" ]; then
+		modprobe "$MODULE" || return 1
+	fi
+
+	bind_all
+
+	[ -f /etc/config/wireless ] || wifi config >/dev/null 2>&1 || true
+	wifi up >/dev/null 2>&1 || true
+	return 0
+}
+
+case "$1" in
+	status)
+		if is_active; then
+			echo "on"
+		else
+			echo "off"
+		fi
+		;;
+	on)
+		wifi_on
+		;;
+	off)
+		wifi_off
+		;;
+	*)
+		echo "Usage: $0 {status|on|off}" >&2
+		exit 1
+		;;
+esac
