@@ -87,6 +87,34 @@ jobs:
       - name: Checkout Projects
         uses: actions/checkout@main
 
+      - name: Free Disk Space
+        run: |
+          echo "Disk space before cleanup:"
+          df -h
+
+          # Remove large preinstalled toolchains this build does not use.
+          # Keep /opt/hostedtoolcache: prepare-build-host.sh uses the runner Go from there.
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /usr/local/lib/android
+          sudo rm -rf /opt/ghc
+          sudo rm -rf /opt/hostedtoolcache/CodeQL
+          sudo rm -rf /usr/local/share/boost
+          sudo rm -rf /usr/local/.ghcup
+          sudo rm -rf /usr/share/swift
+          sudo rm -rf /usr/lib/jvm
+          sudo rm -rf /usr/local/share/chromium
+
+          # Drop unused Docker images and build cache.
+          if command -v docker >/dev/null 2>&1; then
+            sudo docker image prune -af || true
+            sudo docker builder prune -af || true
+          fi
+
+          sudo apt-get clean
+
+          echo "Disk space after cleanup:"
+          df -h
+
       - name: Initialization Environment
         env:
           DEBIAN_FRONTEND: noninteractive
@@ -185,6 +213,23 @@ jobs:
           echo "1" > ./wrt/tmp/.build
           echo "restored build cache: ${{steps.cache-restore.outputs.cache-matched-key}}"
 
+      - name: Limit Build Cache Size
+        if: ${{ !inputs.WRT_TEST }}
+        run: |
+          export CCACHE_DIR="$PWD/wrt/.ccache"
+          mkdir -p "$CCACHE_DIR"
+
+          if [ -x ./wrt/staging_dir/host/bin/ccache ]; then
+            ./wrt/staging_dir/host/bin/ccache -M 2G || true
+            ./wrt/staging_dir/host/bin/ccache -c || true
+          elif command -v ccache >/dev/null 2>&1; then
+            ccache -M 2G || true
+            ccache -c || true
+          fi
+
+          df -h
+          du -sh "$CCACHE_DIR" ./wrt/staging_dir/host* ./wrt/staging_dir/tool* 2>/dev/null || true
+
       - name: Update Feeds
         run: |
           cd ./wrt/
@@ -239,14 +284,34 @@ jobs:
 
           make download -j$(nproc)
 
+      - name: Check Disk Before Build
+        if: ${{ !inputs.WRT_TEST }}
+        run: |
+          cd ./wrt/
+
+          df -h
+          du -sh .ccache staging_dir dl build_dir 2>/dev/null || true
+
       - name: Compile Firmware
         if: ${{ !inputs.WRT_TEST }}
         run: |
           cd ./wrt/
 
-          mkdir -p $GITHUB_WORKSPACE/build-reports
-          make -j$(nproc) BUILD_TIME_LOG="$GITHUB_WORKSPACE/build-reports/parallel.tsv" || \
-            make -j1 V=s BUILD_TIME_LOG="$GITHUB_WORKSPACE/build-reports/serial.tsv"
+          mkdir -p "$GITHUB_WORKSPACE/build-reports"
+          BUILD_LOG="$GITHUB_WORKSPACE/build-reports/build.log"
+          set -o pipefail
+
+          if make -j$(nproc) BUILD_TIME_LOG="$GITHUB_WORKSPACE/build-reports/parallel.tsv" 2>&1 | tee "$BUILD_LOG"; then
+            exit 0
+          fi
+
+          {
+            echo "Parallel build failed; disk usage at failure:"
+            df -h
+            du -sh .ccache staging_dir dl build_dir 2>/dev/null || true
+          } | tee -a "$BUILD_LOG"
+
+          make -j1 V=s BUILD_TIME_LOG="$GITHUB_WORKSPACE/build-reports/serial.tsv" 2>&1 | tee -a "$BUILD_LOG"
 
       - name: Collect Build Reports
         if: ${{ !inputs.WRT_TEST && always() }}

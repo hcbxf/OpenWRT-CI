@@ -13,6 +13,12 @@ if [ -f .config ]; then
 fi
 ./scripts/feeds list -fs > "$REPORT_DIR/feeds.buildinfo"
 
+{
+	df -h
+	echo
+	du -sh .ccache staging_dir dl build_dir 2>/dev/null || true
+} > "$REPORT_DIR/disk.txt"
+
 REPORT_PATHS=$(make --no-print-directory -s -f - TOPDIR="$PWD" ci-report-paths <<'MAKE'
 include $(TOPDIR)/rules.mk
 .PHONY: ci-report-paths
