@@ -270,6 +270,15 @@ jobs:
 
           make defconfig -j$(nproc) && make clean -j$(nproc)
 
+          if [[ "$WRT_WIFI_POWER" == 'true' ]]; then
+            if ! grep -qx 'CONFIG_PACKAGE_luci-app-wifi-power=y' .config; then
+              echo "ERROR: luci-app-wifi-power was not selected by defconfig." >&2
+              echo "Check that Package/luci-app-wifi-power/Makefile is scanned." >&2
+              exit 1
+            fi
+            echo "luci-app-wifi-power selected in .config"
+          fi
+
       - name: Prepare Rust Toolchain
         if: ${{ !inputs.WRT_TEST }}
         run: |
@@ -312,6 +321,27 @@ jobs:
           } | tee -a "$BUILD_LOG"
 
           make -j1 V=s BUILD_TIME_LOG="$GITHUB_WORKSPACE/build-reports/serial.tsv" 2>&1 | tee -a "$BUILD_LOG"
+
+      - name: Verify Image Packages
+        if: ${{ !inputs.WRT_TEST && success() }}
+        run: |
+          cd ./wrt/
+
+          if [[ "$WRT_WIFI_POWER" == 'true' ]]; then
+            MANIFEST=$(find ./bin/targets -type f -name '*.manifest' | head -n1)
+
+            if [ -z "$MANIFEST" ]; then
+              echo "ERROR: no image manifest found under ./bin/targets" >&2
+              exit 1
+            fi
+
+            if ! grep -q '^luci-app-wifi-power ' "$MANIFEST"; then
+              echo "ERROR: luci-app-wifi-power is missing from $MANIFEST" >&2
+              exit 1
+            fi
+
+            echo "luci-app-wifi-power present in $MANIFEST"
+          fi
 
       - name: Collect Build Reports
         if: ${{ !inputs.WRT_TEST && always() }}

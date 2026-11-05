@@ -6,3 +6,5 @@ LUCI_DEPENDS:=+luci-base +wifi-scripts +kmod-mt7915e
 LUCI_PKGARCH:=all
 
 include $(TOPDIR)/feeds/luci/luci.mk
+
+# call BuildPackage - OpenWrt buildroot signature
