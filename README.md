@@ -58,6 +58,14 @@ Scripts——自定义脚本
 
 Config——自定义配置
 
+## S20P 编译
+
+`S20P` 工作流使用 `Config/S20P-WIFI-YES.txt`，默认集成 AC Agent 及其 LuCI 中文设置页，以及 Docker、Docker Compose 和 Dockerman 中文管理页。`Config/S20P-NO-WIFI.txt` 同步启用这些软件包。
+
+AC Agent 来自 `naoki66/OpenWrt_AC-Controller` 的 `main` 分支，由 `Scripts/Packages.sh` 在 S20P 编译时提取 `agent/openwrt` 下的 `ac-agent` 和 `luci-app-ac-agent` 并从源码编译。
+
+首次可手动运行 `S20P` 工作流并勾选 `TEST`，检查输出配置；取消 `TEST` 后编译完整固件。Docker 数据目录默认在 `/opt/docker`，运行容器前请确认可写空间充足，较大的镜像建议放在外接存储。
+
 ## Star History
 
 <a href="https://www.star-history.com/?repos=vikingyfy%2Fopenwrt-ci&type=date&legend=top-left">

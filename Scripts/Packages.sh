@@ -95,6 +95,12 @@ UPDATE_PACKAGE "qmodem-generic" "LianXia233/luci-app-qmodem-generic" "main"
 #S20P专用插件
 if [[ "${WRT_CONFIG^^}" == *"S20P"* ]]; then
 	UPDATE_PACKAGE "ipv6prefixsnat" "zorzcc/luci-app-ipv6prefixsnat" "master"
+	# 从agent/openwrt提取ac-agent及配套LuCI，不引入控制器端
+	UPDATE_PACKAGE "ac-agent" "naoki66/OpenWrt_AC-Controller" "main" "pkg"
+	if [[ ! -f ./package/ac-agent/Makefile || ! -f ./package/luci-app-ac-agent/Makefile ]]; then
+		echo "ERROR: ac-agent or luci-app-ac-agent package is missing." >&2
+		exit 1
+	fi
 fi
 
 #更新软件包版本
