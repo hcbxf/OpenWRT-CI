@@ -44,3 +44,21 @@ FIX "mini-diskmanager" "$PACKAGE_PATH/luci-app-mini-diskmanager" sed -i "s/servi
 #修改natmapt菜单位置
 FIX "natmapt" "$PACKAGE_PATH/luci-app-natmapt" sed -i "s/network/services/g" \
 	"$PACKAGE_PATH/luci-app-natmapt/root/usr/share/luci/menu.d/luci-app-natmap.json"
+
+#S20P仅移除独立RADIUS服务文件，保留完整wpad及其WiFi认证功能
+if [[ "${WRT_CONFIG^^}" == "S20P-WIFI-YES" ]]; then
+	HOSTAPD_MAKEFILE="$PACKAGE_PATH/network/services/hostapd/Makefile"
+
+	if ! grep -qx 'define Install/hostapd/full' "$HOSTAPD_MAKEFILE" || \
+	   ! grep -qx 'define Package/hostapd-full/conffiles' "$HOSTAPD_MAKEFILE"; then
+		echo "ERROR: expected hostapd RADIUS install definitions were not found." >&2
+		exit 1
+	fi
+
+	sed -i \
+		-e '/^define Install\/hostapd\/full$/,/^endef$/c\define Install/hostapd/full\nendef' \
+		-e '/^define Package\/hostapd-full\/conffiles$/,/^endef$/c\define Package/hostapd-full/conffiles\nendef' \
+		"$HOSTAPD_MAKEFILE" || exit 1
+
+	echo "S20P standalone RADIUS service files removed from hostapd packaging."
+fi
